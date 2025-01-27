@@ -1,0 +1,91 @@
+import streamlit as st
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from conn import MySQLDatabase  # Assuming MySQLDatabase class is in conn.py
+
+# Initialize database connection
+db = MySQLDatabase()
+
+# Streamlit Page Config
+st.set_page_config(page_title="Lease Management Dashboard")
+st.title("Lease Management Dashboard")
+
+# Email Credentials
+EMAIL_SENDER = "inf0@digiage.co.ke"
+EMAIL_PASSWORD = "D3dss&V(3oPG"
+SMTP_SERVER = "mail.digiage.co.ke"
+SMTP_PORT = 465  # Use SSL port
+
+def send_email(recipient, tenant, unit, property_name, end_date):
+    """Send an email reminder using your domain's SMTP"""
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = EMAIL_SENDER
+        msg["To"] = recipient
+        msg["Subject"] = "Lease Expiry Reminder"
+
+        body = f"""
+        Dear {tenant},
+
+        This is a reminder that your lease for {unit} at {property_name} is expiring on {end_date}.
+        Please take the necessary action to renew or close the lease.
+
+        Regards,
+        Lease Management Team
+        """
+        msg.attach(MIMEText(body, "plain"))
+
+        # Connect to SMTP Server using SSL
+        server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_SENDER, recipient, msg.as_string())
+        server.quit()
+
+        print(f"Email sent to {recipient}")
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False  
+    
+    
+# Fetch Data
+expired = db.fetch_all_expried()
+expiring = db.fetch_all_expring()
+new_add = db.fetch_all_recent_add()
+
+# Display Expired Leases with Email Buttons
+if not expired.empty:
+    st.subheader("Expired Leases")
+    for _, row in expired.iterrows():
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.write(f"**{row['Client']}** - {row['Unit Name']} ({row['Property']}) - Expired on {row['End Date']}")
+        with col2:
+            if st.button(f"📧 Send Email", key=f"expired_{row.name}"):
+                if send_email("abhishekshah546@gmail.com", row["Client"], row["Unit Name"], row["Property"], row["End Date"]):
+                    st.success(f"Email sent to {row['Client']}")
+
+# Display Expiring Leases with Email Buttons
+if not expiring.empty:
+    st.subheader("Next 5 Leases to Expire")
+    for _, row in expiring.iterrows():
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.write(f"**{row['Client']}** - {row['Unit Name']} ({row['Property']}) - Expiring on {row['End Date']}")
+        with col2:
+            if st.button(f"📧 Send Email", key=f"expiring_{row.name}"):
+                if send_email("abhishekshah546@gmail.com", row["Client"], row["Unit Name"], row["Property"], row["End Date"]):
+                    st.success(f"Email sent to {row['Client']}")
+
+# Display Recently Added Leases with Email Buttons
+if not new_add.empty:
+    st.subheader("Last 5 Leases Added")
+    for _, row in new_add.iterrows():
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.write(f"**{row['Client']}** - {row['Unit Name']} ({row['Property']})")
+        with col2:
+            if st.button(f"📧 Send Email", key=f"new_{row.name}"):
+                if send_email("abhishekshah546@gmail.com", row["Client"], row["Unit Name"], row["Property"]):
+                    st.success(f"Email sent to {row['Client']}")
