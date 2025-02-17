@@ -148,7 +148,7 @@ def Leasesummary():
                     signed = False  # Assuming the lease is not signed yet
                     lease_pdf = Lease_file.read()  # Convert lease file to binary for storage
 
-                    # Insert the lease using `insert_lease`
+                    # Insert the lease using insert_lease
                     db.insert_lease(client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed)
 
                     st.success("Lease data inserted into the database successfully!")
