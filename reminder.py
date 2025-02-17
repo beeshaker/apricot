@@ -18,7 +18,7 @@ logging.info("Starting Lease Reminder Script...")
 load_dotenv()
 
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
-RECIPIENT_WAID = os.getenv("RECIPIENT_WAID")
+RECIPIENT_WAID = os.getenv("RECIPIENT_WAID")    
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 VERSION = os.getenv("VERSION")
 APP_ID = os.getenv("APP_ID")
@@ -58,7 +58,7 @@ def send_whatsapp(to_phone, tenant_name, expiry_date):
         "to": to_phone,  # Full international format (e.g., "254712345678")
         "type": "template",
         "template": {
-            "name": "account_creation_confirmation_3",
+            "name": "apricot_lease_reminder",
             "language": {"code": "en_US"},
             "components": [
                 {
@@ -133,8 +133,9 @@ def check_and_notify():
             lease_id,  expiry_date = lease
             logging.info(f"Processing lease {lease_id}  (Expiring: {expiry_date})")
 
-            #send_email("abhishekshah546@gmail.com", "test", expiry_date)
-            send_whatsapp("+254 737 953124","test", expiry_date)
+            #send_email("admin@apricotproperty.com", "test", expiry_date)
+            #send_whatsapp("+254 759452444","test", expiry_date)
+            send_whatsapp("+254 737953124","test", expiry_date)
 
     except Exception as e:
         logging.error(f"Error fetching leases: {e}")

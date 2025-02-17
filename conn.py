@@ -1,13 +1,22 @@
 import mysql.connector
 from mysql.connector import Error
 import pandas as pd
+import streamlit as st
 
 class MySQLDatabase:
     def __init__(self):
+        '''
         self.host = "localhost"
         self.user = "root"
         self.password = "pass"
         self.database = "apricot"
+        '''      
+        
+        self.host = st.secrets["DB_HOST"]
+        self.user= st.secrets["DB_USER"]
+        self.password= st.secrets["DB_PASSWORD"]
+        self.database =st.secrets["DB_TABLE"]
+       
         self.conn = None
         self.cursor = None
         self.connect()  # ✅ Keep connection open on startup
@@ -74,7 +83,7 @@ class MySQLDatabase:
             self.connect()
             query = """
             SELECT l.lease_id, c.tenant_name, p.property_name, l.unit_name, l.start_date, l.end_date, l.increment_period, l.rental_amount, l.lease_deposit, l.created_at, 
-       l.last_updated FROM Lease AS l JOIN Property AS p ON l.property_id = p.property_id JOIN Client AS c ON l.client_id = c.client_id LIMIT 5;"""
+       l.last_updated From lease AS l JOIN property AS p ON l.property_id = p.property_id JOIN client AS c ON l.client_id = c.client_id LIMIT 5;"""
        
             self.cursor.execute(query)
             rows = self.cursor.fetchall()
@@ -98,9 +107,9 @@ class MySQLDatabase:
             self.connect()
             query = """
                 SELECT l.lease_id, unit_name, tenant_name, property_name, end_date
-                FROM Lease l
-                JOIN Client c ON l.client_id = c.client_id
-                JOIN Property p ON l.property_id = p.property_id
+                From lease l
+                JOIN client c ON l.client_id = c.client_id
+                JOIN property p ON l.property_id = p.property_id
                 WHERE l.lease_status = 'Open' and end_date > CURDATE()
                 ORDER BY l.end_date ASC
                 LIMIT 5
@@ -128,9 +137,9 @@ class MySQLDatabase:
             self.connect()
             query = """
                 SELECT l.lease_id, unit_name, tenant_name, property_name, start_date
-                FROM Lease l
-                JOIN Client c ON l.client_id = c.client_id
-                JOIN Property p ON l.property_id = p.property_id
+                From lease l
+                JOIN client c ON l.client_id = c.client_id
+                JOIN property p ON l.property_id = p.property_id
                 WHERE l.lease_status = 'Open'
                 ORDER BY l.start_date DESC
                 LIMIT 5
@@ -158,9 +167,9 @@ class MySQLDatabase:
             self.connect()
             query = """
                 SELECT l.lease_id, unit_name, tenant_name, property_name, end_date
-                FROM Lease l
-                JOIN Client c ON l.client_id = c.client_id
-                JOIN Property p ON l.property_id = p.property_id
+                From lease l
+                JOIN client c ON l.client_id = c.client_id
+                JOIN property p ON l.property_id = p.property_id
                 WHERE l.end_date < CURDATE() AND l.lease_status = 'Open'
             """
             self.cursor.execute(query)
@@ -209,7 +218,7 @@ class MySQLDatabase:
                     email AS 'Email', 
                     contact_person AS 'Contact Person', 
                     address AS 'Address'
-                FROM Client
+                from client 
             """
             self.cursor.execute(query)
             result = self.cursor.fetchall()
@@ -253,7 +262,7 @@ class MySQLDatabase:
                        address AS 'Address', 
                        owner AS 'Owner', 
                        unit_count AS 'Unit Count'
-                FROM Property
+                from property
             """
             self.cursor.execute(query)
             result = self.cursor.fetchall()
@@ -294,9 +303,9 @@ class MySQLDatabase:
                        l.lease_pdf AS 'Lease PDF',
                        l.signed AS 'Signed',
                        l.lease_status AS 'Status'
-                FROM Lease l
-                JOIN Client c ON l.client_id = c.client_id
-                JOIN Property p ON l.property_id = p.property_id
+                FROM lease l
+                JOIN client c ON l.client_id = c.client_id
+                JOIN property p ON l.property_id = p.property_id
             """
             self.cursor.execute(query)
             result = self.cursor.fetchall()
@@ -330,9 +339,9 @@ class MySQLDatabase:
             print("✅ Running SQL query...")
             query = """
                 SELECT l.lease_id, unit_name, tenant_name, property_name, end_date
-                FROM Lease l
-                JOIN Client c ON l.client_id = c.client_id
-                JOIN Property p ON l.property_id = p.property_id
+                FROM lease l
+                JOIN client c ON l.client_id = c.client_id
+                JOIN property p ON l.property_id = p.property_id
                 WHERE l.lease_status = 'Open'
                 ORDER BY l.end_date ASC
                 LIMIT 5
@@ -405,7 +414,7 @@ class MySQLDatabase:
             self.connect()
             query = """
                 SELECT client_id, tenant_name AS 'Tenant Name'
-                FROM Client
+                from client 
             """
             self.cursor.execute(query)
             rows = self.cursor.fetchall()
@@ -425,7 +434,7 @@ class MySQLDatabase:
             self.connect()
             query = """
                 SELECT property_id, property_name AS 'Property Name'
-                FROM Property
+                from property
             """
             self.cursor.execute(query)
             rows = self.cursor.fetchall()
@@ -443,7 +452,7 @@ class MySQLDatabase:
     def fetch_leases_for_reminder(self):
         query = """
         SELECT lease_id, end_date
-        FROM lease
+        From lease
         WHERE lease_status = 'Open' 
         AND (
             end_date = CURDATE() + INTERVAL 3 MONTH OR
