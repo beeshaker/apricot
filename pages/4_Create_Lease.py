@@ -35,7 +35,7 @@ with st.form("lease_form"):
         # Check if there's an open lease for the same unit
         check_query = """
             SELECT COUNT(*) AS count
-            FROM Lease
+            FROM lease
             WHERE unit_name = %s AND lease_status = 'Open'
         """
         existing_leases = db.fetch_one(check_query, (unit_name,))

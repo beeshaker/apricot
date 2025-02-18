@@ -121,7 +121,7 @@ def Leasesummary():
 
                 # If client does not exist, insert into database
                 if not client_id:
-                    client_insert_query = "INSERT INTO Clients (name) VALUES (%s)"
+                    client_insert_query = "INSERT INTO clients (name) VALUES (%s)"
                     db.execute_query(client_insert_query, (client_name,))
                     client_id = db.get_last_insert_id()
 
