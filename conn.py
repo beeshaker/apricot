@@ -197,7 +197,7 @@ class MySQLDatabase:
         try:
             self.connect()
             query = """
-                INSERT INTO Client (tenant_name, phone_number, email, contact_person, address)
+                INSERT INTO client (tenant_name, phone_number, email, contact_person, address)
                 VALUES (%s, %s, %s, %s, %s)
             """
             values = (tenant_name, phone_number, email, contact_person, address)
@@ -243,7 +243,7 @@ class MySQLDatabase:
         try:
             self.connect()
             query = """
-                INSERT INTO Property (property_name, address, owner, unit_count)
+                INSERT INTO property (property_name, address, owner, unit_count)
                 VALUES (%s, %s, %s, %s)
             """
             self.cursor.execute(query, (property_name, address, owner, unit_count))
