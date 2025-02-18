@@ -91,9 +91,12 @@ if lease_table_data:
 
             # **Allow user to modify new rental amount**
             new_rental_amount_input = st.number_input(
-                "New Rental Amount (after escalation)", 
-                value=new_rental_amount, min_value=0.0
+                "Enter new rental amount", 
+                min_value=0.0,  # Ensure it's explicitly a float
+                max_value=1000000.0, 
+                value=float(new_rental_amount) if new_rental_amount else 0.0
             )
+
 
             st.write(f"**Lease Deposit**: KSH {lease['Lease Deposit']}")
 
