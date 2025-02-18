@@ -30,9 +30,9 @@ query_all = """
            l.signed AS 'Signed',
            l.lease_status AS 'Status',
            l.lease_pdf AS 'Lease PDF'
-    FROM Lease l
-    JOIN Client c ON l.client_id = c.client_id
-    JOIN Property p ON l.property_id = p.property_id
+    FROM lease l
+    JOIN client c ON l.client_id = c.client_id
+    JOIN property p ON l.property_id = p.property_id
 """
 leases = db.fetch_all(query_all)
 
