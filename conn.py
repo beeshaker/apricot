@@ -273,20 +273,34 @@ class MySQLDatabase:
         finally:
             self.close()
 
-    def insert_lease(self, client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount):
+    def insert_lease(self, client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed, increment_period=None, increment_percentage=None, increment_amount=None):
         try:
             self.connect()
-            query = """
-                INSERT INTO Lease (client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            self.cursor.execute(query, (client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount))
+            
+            # Determine which query to use based on optional parameters
+            if increment_period is None:
+                query = """
+                    INSERT INTO Lease (client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                values = (client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed)
+            else:
+                query = """
+                    INSERT INTO Lease (client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                values = (client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount)
+
+            self.cursor.execute(query, values)
             self.conn.commit()
             print("Lease data inserted successfully")
+        
         except Error as e:
             print(f"Error while inserting lease data: {e}")
+        
         finally:
             self.close()
+
 
     def fetch_all_leases_detailed(self):
         try:
