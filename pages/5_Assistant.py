@@ -44,7 +44,7 @@ def generate_schema_summary(schema_raw_text):
     Summary:
     """
     
-    summary_llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+    summary_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     # Wrap the prompt in a HumanMessage for compatibility
     summary = summary_llm([HumanMessage(content=summarization_prompt)]).content
     print(summary)
@@ -91,7 +91,7 @@ def get_sql_chain(db):
     prompt = ChatPromptTemplate.from_template(template)
     #llm = ChatOpenAI(model="gpt-4-0125-preview")
     #llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
-    llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     
     def clean_sql_output(output):
         # Remove backticks from the query
@@ -135,7 +135,7 @@ def get_response(user_query: str, db: SQLDatabase, chat_history: list):
   
     prompt = ChatPromptTemplate.from_template(template)
   
-    llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     
     def clean_query(query: str) -> str:
         """
