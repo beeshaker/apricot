@@ -149,7 +149,10 @@ def Leasesummary():
                     lease_pdf = Lease_file.read()  # Convert lease file to binary for storage
 
                     # Insert the lease using insert_lease
-                    db.insert_lease(client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed)
+                    if increment_period == None:
+                        db.insert_lease(client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed)
+                    else:
+                        db.insert_lease(client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, None, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount)
 
                     st.success("Lease data inserted into the database successfully!")
 
@@ -209,6 +212,8 @@ def parse_lease_response(response_text):
         - unit_name: The specific unit name or identifier.
         - rental_amount: The monthly rental amount (float).
         - lease_deposit: The lease deposit amount (float).
+        - increment_percentage: The increament percentage (integer).
+        - increment_amount": The increament amount(float)
 
         Example JSON format:
         {{
@@ -218,6 +223,8 @@ def parse_lease_response(response_text):
             "unit_name": "Suite 5B",
             "rental_amount": 50820.00,
             "lease_deposit": 165060.00
+            "increment_percentage": 5
+            "increment_amount": 2541.00
         }}
 
         Lease:

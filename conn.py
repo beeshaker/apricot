@@ -273,14 +273,14 @@ class MySQLDatabase:
         finally:
             self.close()
 
-    def insert_lease(self, client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed):
+    def insert_lease(self, client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount):
         try:
             self.connect()
             query = """
-                INSERT INTO Lease (client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed)
+                INSERT INTO Lease (client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-            self.cursor.execute(query, (client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed))
+            self.cursor.execute(query, (client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount))
             self.conn.commit()
             print("Lease data inserted successfully")
         except Error as e:

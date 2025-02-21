@@ -63,4 +63,6 @@ with st.form("lease_form"):
                 client_id, property_id, unit_name, start_date, end_date, increment_period,
                 original_rental_amount, None, lease_deposit, pdf_path, signed, increment_percentage, increment_amount
             )
+            
+            
             st.success("Lease created successfully!")
