@@ -174,8 +174,8 @@ def summarize_lease(lease_text):
     """
     try:
         load_dotenv()
-        #model = ChatOpenAI(model="gpt-4-0125-preview", temperature=0)
-        model = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+        model = ChatOpenAI(model="gpt-4-0125-preview", temperature=0)
+        #model = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
         formatted_prompt = summary_prompt.format(lease_text=lease_text)
         response = model.invoke(formatted_prompt)      
         
@@ -224,7 +224,7 @@ def parse_lease_response(response_text):
     try:
         # Load environment variables and initialize the model
         load_dotenv()
-        model = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+        #model = ChatOpenAI(model="gpt-4-0125-preview", temperature=0)
 
         # Format the prompt with the lease text
         formatted_prompt = summary_prompt.format(response_text=response_text)
