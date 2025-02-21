@@ -227,6 +227,7 @@ def parse_lease_response(response_text):
         # Load environment variables and initialize the model
         load_dotenv()
         #model = ChatOpenAI(model="gpt-4-0125-preview", temperature=0)
+        model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
         # Format the prompt with the lease text
         formatted_prompt = summary_prompt.format(response_text=response_text)
