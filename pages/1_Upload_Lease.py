@@ -147,8 +147,8 @@ def Leasesummary():
                     lease_deposit = lease_data.get("lease_deposit", 0.0)
                     signed = False  # Assuming the lease is not signed yet
                     lease_pdf = Lease_file.read()  # Convert lease file to binary for storage
-                    increment_percentage = lease_data.get("increment_percentage", 0)
-                    increment_amount = lease_data.get("increment_amount", 0.0)
+                    increment_percentage = lease_data.get("increment_percentage")
+                    increment_amount = lease_data.get("increment_amount")
 
                     # Insert the lease using insert_lease
                     if increment_period == None:
@@ -156,7 +156,7 @@ def Leasesummary():
                     else:
                         db.insert_lease(client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount)
 
-                    st.success("Lease data inserted into the database successfully!")
+                        st.success("Lease data inserted into the database successfully!")
 
             
 
