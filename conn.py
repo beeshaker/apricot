@@ -5,7 +5,7 @@ import streamlit as st
 
 class MySQLDatabase:
     def __init__(self):
-        
+        '''
         self.host = "localhost"
         self.user = "root"
         self.password = "pass"
@@ -16,7 +16,7 @@ class MySQLDatabase:
         self.user= st.secrets["DB_USER"]
         self.password= st.secrets["DB_PASSWORD"]
         self.database =st.secrets["DB_TABLE"]
-        '''
+        
        
         self.conn = None
         self.cursor = None
