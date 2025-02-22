@@ -133,7 +133,7 @@ def Leasesummary():
                     property_id = db.get_last_insert_id()
 
                 # Check if there's an open lease for the same unit
-                check_query = "SELECT COUNT(*) AS count FROM Lease WHERE unit_name = %s AND lease_status = 'Open'"
+                check_query = "SELECT COUNT(*) AS count FROM lease WHERE unit_name = %s AND lease_status = 'Open'"
                 existing_leases = db.fetch_one(check_query, (unit_name,))
 
                 if existing_leases and existing_leases['count'] > 0:
