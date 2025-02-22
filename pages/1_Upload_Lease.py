@@ -99,6 +99,7 @@ def Leasesummary():
         property_name = st.selectbox("Select Property", property_options, index=0)
         client_name = st.selectbox("Select Client", client_options, index=0)
         unit_name = st.text_input("Unit Name")
+        lease_signed = st.checkbox("Lease Signed?")
 
         # Editable form for parsed data
         for key, value in st.session_state["editable_data"].items():
@@ -142,11 +143,11 @@ def Leasesummary():
                     lease_data = st.session_state["editable_data"]
                     start_date = lease_data.get("start_date")
                     end_date = lease_data.get("end_date")
-                    increment_period = lease_data.get("increment_period", 0)
+                    increment_period = lease_data.get("increment_period")
                     rental_amount = lease_data.get("rental_amount", 0.0)
                     lease_deposit = lease_data.get("lease_deposit", 0.0)
-                    signed = False  # Assuming the lease is not signed yet
-                    lease_pdf = Lease_file.read()  # Convert lease file to binary for storage
+                    signed = lease_signed
+                    lease_pdf = Lease_file.read() if Lease_file else None
                     increment_percentage = lease_data.get("increment_percentage")
                     increment_amount = lease_data.get("increment_amount")
 
@@ -154,7 +155,7 @@ def Leasesummary():
                     if increment_period == None:
                         db.insert_lease(client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed)
                     else:
-                        db.insert_lease(client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount)
+                        db.insert_lease(client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed, increment_period,increment_percentage, increment_amount)
 
                         st.success("Lease data inserted into the database successfully!")
 
