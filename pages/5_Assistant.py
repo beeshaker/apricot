@@ -91,7 +91,8 @@ def get_sql_chain(db):
     prompt = ChatPromptTemplate.from_template(template)
     #llm = ChatOpenAI(model="gpt-4-0125-preview")
     #llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    
+    llm = ChatGroq(model="llama3-8b-8192", temperature=0)
     
     def clean_sql_output(output):
         # Remove backticks from the query
@@ -135,7 +136,9 @@ def get_response(user_query: str, db: SQLDatabase, chat_history: list):
   
     prompt = ChatPromptTemplate.from_template(template)
   
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    #llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+    
     
     def clean_query(query: str) -> str:
         """

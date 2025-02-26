@@ -17,6 +17,12 @@ import json
 from langchain_openai import ChatOpenAI
 import pytesseract
 
+
+
+
+model = ChatGroq(model="llama3-8b-8192", temperature=0)
+#model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
 def extract_text(file):
     text = ""
     try:
@@ -133,7 +139,7 @@ def Leasesummary():
                     property_id = db.get_last_insert_id()
 
                 # Check if there's an open lease for the same unit
-                check_query = "SELECT COUNT(*) AS count FROM lease WHERE unit_name = %s AND lease_status = 'Open' AND Property_id = %s"
+                check_query = "SELECT COUNT(*) AS count FROM lease WHERE unit_name = %s AND Property_id = %s AND lease_status = 'Open'"
                 existing_leases = db.fetch_one(check_query, (unit_name,property_id,))
 
                 if existing_leases and existing_leases['count'] > 0:
@@ -181,8 +187,8 @@ def summarize_lease(lease_text):
     try:
         load_dotenv()
         #model = ChatOpenAI(model="gpt-4-0125-preview", temperature=0)
-        #model = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
-        model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        
+        #
         
         formatted_prompt = summary_prompt.format(lease_text=lease_text)
         response = model.invoke(formatted_prompt)      
@@ -236,8 +242,7 @@ def parse_lease_response(response_text):
     try:
         # Load environment variables and initialize the model
         load_dotenv()
-        #model = ChatOpenAI(model="gpt-4-0125-preview", temperature=0)
-        model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+       
 
         # Format the prompt with the lease text
         formatted_prompt = summary_prompt.format(response_text=response_text)
