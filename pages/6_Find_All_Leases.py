@@ -1,6 +1,7 @@
 import streamlit as st
 from conn import MySQLDatabase
 import base64
+import datetime
 
 # Initialize database connection
 db = MySQLDatabase()
@@ -92,11 +93,10 @@ if lease_table_data:
             # **Allow user to modify new rental amount**
             new_rental_amount_input = st.number_input(
                 "Enter new rental amount", 
-                min_value=0.0,  # Ensure it's explicitly a float
+                min_value=0.0,  
                 max_value=1000000.0, 
                 value=float(new_rental_amount) if new_rental_amount else 0.0
             )
-
 
             st.write(f"**Lease Deposit**: KSH {lease['Lease Deposit']}")
 
@@ -104,7 +104,7 @@ if lease_table_data:
             lease_pdf = lease.get("Lease PDF")
 
             if isinstance(lease_pdf, bytearray):
-                lease_pdf = bytes(lease_pdf)  # Convert to bytes if it's a bytearray
+                lease_pdf = bytes(lease_pdf)  
 
             if lease_pdf and len(lease_pdf) > 0:
                 st.write("**Lease PDF Available**")
@@ -123,7 +123,6 @@ if lease_table_data:
                 update_submitted = st.form_submit_button("Update Lease")
 
             if update_submitted:
-                # ✅ Update lease details
                 update_query = """
                     UPDATE Lease
                     SET signed = %s, lease_status = %s, new_rental_amount = %s
@@ -132,5 +131,31 @@ if lease_table_data:
                 db.execute_query(update_query, (signed, status, new_rental_amount_input, lease_id))
                 st.success("Lease updated successfully!")
                 st.rerun()
-else:
-    st.warning("No leases found.")
+
+            # ✅ Lease Close Section
+            st.subheader("Close Lease")
+
+            close_reason = st.text_area("Reason for closing the lease")
+            current_user = "Admin"  # Replace with actual user from authentication
+
+            if st.button("Close Lease"):
+                if not close_reason.strip():
+                    st.error("Please provide a reason for closing the lease.")
+                else:
+                    update_query = """
+                        UPDATE lease
+                        SET lease_status = 'Closed'
+                        WHERE lease_id = %s
+                    """
+                    db.execute_query(update_query, (lease_id,))
+
+                    log_query = """
+                        INSERT INTO closed_leases (lease_id, closed_by, close_reason, close_date)
+                        VALUES (%s, %s, %s, %s)
+                    """
+                    db.execute_query(log_query, (lease_id, current_user, close_reason, datetime.datetime.now()))
+
+                    st.success("Lease closed successfully and logged!")
+                    st.rerun()
+
+# ✅ Show Closed Lease History
