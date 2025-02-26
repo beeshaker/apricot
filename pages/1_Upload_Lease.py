@@ -133,8 +133,8 @@ def Leasesummary():
                     property_id = db.get_last_insert_id()
 
                 # Check if there's an open lease for the same unit
-                check_query = "SELECT COUNT(*) AS count FROM lease WHERE unit_name = %s AND lease_status = 'Open'"
-                existing_leases = db.fetch_one(check_query, (unit_name,))
+                check_query = "SELECT COUNT(*) AS count FROM lease WHERE unit_name = %s AND lease_status = 'Open' AND Property_id = %s"
+                existing_leases = db.fetch_one(check_query, (unit_name,property_id,))
 
                 if existing_leases and existing_leases['count'] > 0:
                     st.error("An open lease already exists for this unit. Please close the existing lease before creating a new one.")
