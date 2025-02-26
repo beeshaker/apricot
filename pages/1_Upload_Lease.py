@@ -20,8 +20,8 @@ import pytesseract
 
 
 
-model = ChatGroq(model="llama3-8b-8192", temperature=0)
-#model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+#model = ChatGroq(model="llama-guard-3-8b", temperature=0)
+model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 def extract_text(file):
     text = ""
@@ -186,7 +186,9 @@ def summarize_lease(lease_text):
     """
     try:
         load_dotenv()
+        
         #model = ChatOpenAI(model="gpt-4-0125-preview", temperature=0)
+        
         
         #
         
@@ -248,6 +250,7 @@ def parse_lease_response(response_text):
         formatted_prompt = summary_prompt.format(response_text=response_text)
 
         # Invoke the model
+        
         response = model.invoke(formatted_prompt)
         
 
