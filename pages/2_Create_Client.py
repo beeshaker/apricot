@@ -5,6 +5,29 @@ from conn import MySQLDatabase
 st.title("Client Creation")
 db = MySQLDatabase()
 
+if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
+    st.switch_page("pages\login.py")  # ✅ Redirect to login
+    st.stop()    
+else:
+    st.sidebar.page_link("main.py", label="Dashboard")
+    st.sidebar.page_link("pages/1_Upload_Lease.py", label="Upload Lease")
+    st.sidebar.page_link("pages/2_Create_Client.py", label="Create Client")
+    st.sidebar.page_link("pages/3_Create_Property.py", label="Create Property")
+    st.sidebar.page_link("pages/4_Create_Lease.py", label="Create Lease")
+    st.sidebar.page_link("pages/5_Assistant.py", label="Assistant")
+    st.sidebar.page_link("pages/6_Find_All_Leases.py", label="Find All Leases")
+    st.sidebar.page_link("pages/7_Closed_Leases.py", label="Closed Leases")
+    st.sidebar.page_link("pages/8_Create_User.py", label="Create User")
+    
+    username = st.session_state["username"]  # Get the logged-in user
+    
+    # Logout button
+    if st.sidebar.button("Logout"):
+        st.session_state.clear()
+        st.success("Logged out successfully!")
+        st.switch_page("pages/login.py")  # Redirect to login page
+
+
 # Client Creation Form
 with st.form("client_form"):
     tenant_name = st.text_input("Tenant Name")
@@ -15,8 +38,12 @@ with st.form("client_form"):
     submitted = st.form_submit_button("Create Client")
 
     if submitted:
-        db.insert_client(tenant_name, phone_number, email, contact_person, address)
-        st.success("Client created successfully!")
+        client_id = db.insert_client(tenant_name, phone_number, email, contact_person, address)
+        if client_id:  # ✅ Ensure client was inserted before logging it
+            db.insert_audit_log(username, "Create Client", client_id, "Client")
+            st.success(f"Client created successfully! (ID: {client_id})")
+        else:
+            st.error("Error inserting client data.")
 
 # Sidebar Filters
 st.sidebar.header("Search Filters")

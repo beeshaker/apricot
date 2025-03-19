@@ -2,8 +2,30 @@ import streamlit as st
 import os
 from conn import MySQLDatabase
 
+
+if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
+    st.switch_page("pages\login.py")  # ✅ Redirect to login
+    st.stop()    
+else:
+    st.sidebar.page_link("main.py", label="Dashboard")
+    st.sidebar.page_link("pages/1_Upload_Lease.py", label="Upload Lease")
+    st.sidebar.page_link("pages/2_Create_Client.py", label="Create Client")
+    st.sidebar.page_link("pages/3_Create_Property.py", label="Create Property")
+    st.sidebar.page_link("pages/4_Create_Lease.py", label="Create Lease")
+    st.sidebar.page_link("pages/5_Assistant.py", label="Assistant")
+    st.sidebar.page_link("pages/6_Find_All_Leases.py", label="Find All Leases")
+    st.sidebar.page_link("pages/7_Closed_Leases.py", label="Closed Leases")
+    st.sidebar.page_link("pages/8_Create_User.py", label="Create User")
+    
+    # Logout button
+    if st.sidebar.button("Logout"):
+        st.session_state.clear()
+        st.success("Logged out successfully!")
+        st.switch_page("pages/login.py")  # Redirect to login page
+
 # Initialize database connection
 db = MySQLDatabase()
+username = st.session_state["username"]  # Get the logged-in user
 
 # Lease Creation Page
 st.title("Lease Creation")
@@ -59,10 +81,11 @@ with st.form("lease_form"):
             increment_amount = original_rental_amount * (increment_percentage / 100) if increment_percentage > 0 else 0.0
 
             # ✅ Insert the new lease into the database
-            db.insert_lease(
+            lease_id = db.insert_lease(
                 client_id, property_id, unit_name, start_date, end_date, increment_period,
                 original_rental_amount, None, lease_deposit, pdf_path, signed, increment_percentage, increment_amount
             )
+            db.insert_audit_log(username, "Upload Lease", lease_id, "Lease")
             
             
             st.success("Lease created successfully!")

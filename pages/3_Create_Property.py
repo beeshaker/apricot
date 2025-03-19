@@ -1,8 +1,31 @@
 import streamlit as st
 from conn import MySQLDatabase  # Assuming the `MySQLDatabase` class is defined in `conn.py`
 
+
+if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
+    st.switch_page("pages\login.py")  # ✅ Redirect to login
+    st.stop()    
+else:
+    st.sidebar.page_link("main.py", label="Dashboard")
+    st.sidebar.page_link("pages/1_Upload_Lease.py", label="Upload Lease")
+    st.sidebar.page_link("pages/2_Create_Client.py", label="Create Client")
+    st.sidebar.page_link("pages/3_Create_Property.py", label="Create Property")
+    st.sidebar.page_link("pages/4_Create_Lease.py", label="Create Lease")
+    st.sidebar.page_link("pages/5_Assistant.py", label="Assistant")
+    st.sidebar.page_link("pages/6_Find_All_Leases.py", label="Find All Leases")
+    st.sidebar.page_link("pages/7_Closed_Leases.py", label="Closed Leases")
+    st.sidebar.page_link("pages/8_Create_User.py", label="Create User")
+    username = st.session_state["username"]  # Get the logged-in user
+    
+    # Logout button
+    if st.sidebar.button("Logout"):
+        st.session_state.clear()
+        st.success("Logged out successfully!")
+        st.switch_page("pages/login.py")  # Redirect to login page
+    
 # Initialize database connection
 db = MySQLDatabase()
+
 
 # Property Creation Page
 st.title("Property Creation")
@@ -17,8 +40,13 @@ with st.form("property_form"):
 
     if submitted:
         # Insert the new property into the database
-        db.insert_property(property_name, address, owner, unit_count)
-        st.success("Property created successfully!")
+        property_id = db.insert_property(property_name, address, owner, unit_count)
+        
+        if property_id:  # ✅ Ensure property was inserted before logging it
+            db.insert_audit_log(username, "Create Property", property_id, "Property")
+            st.success(f"Property created successfully! (ID: {property_id})")
+        else:
+            st.error("Error inserting property data.")
 
 # Sidebar Filters
 st.sidebar.header("Filter Properties")

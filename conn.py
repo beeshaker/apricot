@@ -5,7 +5,7 @@ import streamlit as st
 
 class MySQLDatabase:
     def __init__(self):
-        '''
+        
         self.host = "localhost"
         self.user = "root"
         self.password = "pass"
@@ -17,7 +17,7 @@ class MySQLDatabase:
         self.password= st.secrets["DB_PASSWORD"]
         self.database =st.secrets["DB_TABLE"]
         
-       
+       '''
         self.conn = None
         self.cursor = None
         self.connect()  # ✅ Keep connection open on startup
@@ -193,7 +193,7 @@ class MySQLDatabase:
     
     def insert_client(self, tenant_name, phone_number, email, contact_person, address):
         """
-        Insert client information into the database.
+        Insert client information into the database and return the client_id.
         """
         try:
             self.connect()
@@ -204,11 +204,20 @@ class MySQLDatabase:
             values = (tenant_name, phone_number, email, contact_person, address)
             self.cursor.execute(query, values)
             self.conn.commit()
-            print("Client data inserted successfully")
+
+            # ✅ Get the last inserted client_id
+            client_id = self.cursor.lastrowid  
+
+            print(f"Client data inserted successfully with ID {client_id}")
+            return client_id  # ✅ Return client_id for audit log
+
         except Error as e:
             print(f"Error while inserting client data: {e}")
+            return None  # ✅ Return None if insertion fails
+
         finally:
             self.close()
+
 
     def fetch_all_clients(self):
         try:
@@ -241,6 +250,9 @@ class MySQLDatabase:
 
 
     def insert_property(self, property_name, address, owner, unit_count):
+        """
+        Insert property information into the database and return the property_id.
+        """
         try:
             self.connect()
             query = """
@@ -249,11 +261,20 @@ class MySQLDatabase:
             """
             self.cursor.execute(query, (property_name, address, owner, unit_count))
             self.conn.commit()
-            print("Property data inserted successfully")
+
+            # ✅ Get the last inserted property_id
+            property_id = self.cursor.lastrowid  
+
+            print(f"Property data inserted successfully with ID {property_id}")
+            return property_id  # ✅ Return property_id for audit log
+
         except Error as e:
             print(f"Error while inserting property data: {e}")
+            return None  # ✅ Return None if insertion fails
+
         finally:
             self.close()
+
 
     def fetch_all_properties(self):
         try:
@@ -278,15 +299,13 @@ class MySQLDatabase:
     def insert_lease(self, client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed, increment_period=None, increment_percentage=None, increment_amount=None):
         try:
             self.connect()
-            
+
             # Determine which query to use based on optional parameters
             if increment_period is None:
                 query = """
                     INSERT INTO lease (client_id, property_id, unit_name, start_date, end_date, original_rental_amount, lease_deposit, lease_pdf, signed)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
-
-                
                 values = (client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed)
             else:
                 query = """
@@ -295,15 +314,23 @@ class MySQLDatabase:
                 """
                 values = (client_id, property_id, unit_name, start_date, end_date, increment_period, rental_amount, lease_deposit, lease_pdf, signed, increment_percentage, increment_amount)
 
+            # Execute the query
             self.cursor.execute(query, values)
             self.conn.commit()
-            print("Lease data inserted successfully")
-        
+
+            # Get the last inserted lease_id
+            lease_id = self.cursor.lastrowid  # ✅ This returns the inserted lease ID
+
+            print(f"Lease data inserted successfully with ID {lease_id}")
+            return lease_id  # ✅ Return lease_id for audit log
+
         except Error as e:
             print(f"Error while inserting lease data: {e}")
-        
+            return None  # ✅ Return None if insertion fails
+
         finally:
             self.close()
+
 
 
     def fetch_all_leases_detailed(self):
@@ -480,3 +507,11 @@ class MySQLDatabase:
         );
         """
         return self.fetch_all(query)
+
+
+    def insert_audit_log(self, username, action_type, target_id, target_type):
+        query = """
+        INSERT INTO audit_log (username, action_type, target_id, target_type)
+        VALUES (%s, %s, %s, %s)
+        """
+        self.execute_query(query, (username, action_type, target_id, target_type))

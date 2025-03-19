@@ -17,9 +17,28 @@ import json
 from langchain_openai import ChatOpenAI
 import pytesseract
 
+if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
+    st.switch_page("pages\login.py")  # ✅ Redirect to login
+    st.stop()    
+else:
+    st.sidebar.page_link("main.py", label="Dashboard")
+    st.sidebar.page_link("pages/1_Upload_Lease.py", label="Upload Lease")
+    st.sidebar.page_link("pages/2_Create_Client.py", label="Create Client")
+    st.sidebar.page_link("pages/3_Create_Property.py", label="Create Property")
+    st.sidebar.page_link("pages/4_Create_Lease.py", label="Create Lease")
+    st.sidebar.page_link("pages/5_Assistant.py", label="Assistant")
+    st.sidebar.page_link("pages/6_Find_All_Leases.py", label="Find All Leases")
+    st.sidebar.page_link("pages/7_Closed_Leases.py", label="Closed Leases")
+    st.sidebar.page_link("pages/8_Create_User.py", label="Create User")
+    
+    # Logout button
+    if st.sidebar.button("Logout"):
+        st.session_state.clear()
+        st.success("Logged out successfully!")
+        st.switch_page("pages/login.py")  # Redirect to login page
 
-
-
+username = st.session_state["username"]  # Get the logged-in user
+load_dotenv()
 #model = ChatGroq(model="llama-guard-3-8b", temperature=0)
 model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
@@ -159,11 +178,13 @@ def Leasesummary():
 
                     # Insert the lease using insert_lease
                     if increment_period == None:
-                        db.insert_lease(client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed)
+                        lease_id= db.insert_lease(client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed)
+                        
                     else:
-                        db.insert_lease(client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed, increment_period,increment_percentage, increment_amount)
+                        lease_id= db.insert_lease(client_id, property_id, unit_name, start_date, end_date, rental_amount, lease_deposit, lease_pdf, signed, increment_period,increment_percentage, increment_amount)
 
-                        st.success("Lease data inserted into the database successfully!")
+                    db.insert_audit_log(username, "Created Lease using upload", lease_id, "Lease")
+                    st.success("Lease data inserted into the database successfully!")
 
             
 
