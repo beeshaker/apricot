@@ -2,15 +2,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from conn import MySQLDatabase
 from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.vectorstores import Chroma
-from langchain_groq import ChatGroq
-from langchain.schema import Document
-from io import BytesIO
-from docx import Document as DocxDocument
-from langchain.schema import Document as Doc
-from langchain.prompts.chat import ChatPromptTemplate
+from menu import menu
 import re
 from pdf2image import convert_from_bytes
 import json
@@ -21,21 +13,9 @@ if "authenticated" not in st.session_state or not st.session_state["authenticate
     st.switch_page("pages\login.py")  # ✅ Redirect to login
     st.stop()    
 else:
-    st.sidebar.page_link("main.py", label="Dashboard")
-    st.sidebar.page_link("pages/1_Upload_Lease.py", label="Upload Lease")
-    st.sidebar.page_link("pages/2_Create_Client.py", label="Create Client")
-    st.sidebar.page_link("pages/3_Create_Property.py", label="Create Property")
-    st.sidebar.page_link("pages/4_Create_Lease.py", label="Create Lease")
-    st.sidebar.page_link("pages/5_Assistant.py", label="Assistant")
-    st.sidebar.page_link("pages/6_Find_All_Leases.py", label="Find All Leases")
-    st.sidebar.page_link("pages/7_Closed_Leases.py", label="Closed Leases")
-    st.sidebar.page_link("pages/8_Create_User.py", label="Create User")
+    menu()
     
-    # Logout button
-    if st.sidebar.button("Logout"):
-        st.session_state.clear()
-        st.success("Logged out successfully!")
-        st.switch_page("pages/login.py")  # Redirect to login page
+    
 
 username = st.session_state["username"]  # Get the logged-in user
 load_dotenv()

@@ -8,6 +8,7 @@ from langchain_community.utilities import SQLDatabase
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
+from menu import menu
 
 
 
@@ -17,15 +18,7 @@ if "authenticated" not in st.session_state or not st.session_state["authenticate
     st.switch_page("pages\login.py")  # ✅ Redirect to login
     st.stop()    
 else:
-    st.sidebar.page_link("main.py", label="Dashboard")
-    st.sidebar.page_link("pages/1_Upload_Lease.py", label="Upload Lease")
-    st.sidebar.page_link("pages/2_Create_Client.py", label="Create Client")
-    st.sidebar.page_link("pages/3_Create_Property.py", label="Create Property")
-    st.sidebar.page_link("pages/4_Create_Lease.py", label="Create Lease")
-    st.sidebar.page_link("pages/5_Assistant.py", label="Assistant")
-    st.sidebar.page_link("pages/6_Find_All_Leases.py", label="Find All Leases")
-    st.sidebar.page_link("pages/7_Closed_Leases.py", label="Closed Leases")
-    st.sidebar.page_link("pages/8_Create_User.py", label="Create User")
+    menu()
     
     # Logout button
     if st.sidebar.button("Logout"):

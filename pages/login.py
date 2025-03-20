@@ -19,6 +19,13 @@ def authenticate_user(username, password):
 
 # Set page configuration
 st.set_page_config(page_title="Login", page_icon="🔒")
+
+col1, col2, col3 = st.columns([1, 2, 1])  # Create 3 columns with the center one being wider
+with col2:
+    st.image("logo.png", use_container_width =True)  # Adjust the path to your logo file
+
+
+
 st.title("Lease Management - Login")
 
 # Input fields
