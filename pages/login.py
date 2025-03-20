@@ -2,6 +2,8 @@
 import streamlit as st
 import hashlib
 from conn import MySQLDatabase
+import openai
+from triva import generate_daily_trivia
 
 # Initialize database connection
 db = MySQLDatabase()
@@ -28,10 +30,30 @@ with col2:
 
 st.title("Lease Management - Login")
 
+
+
 # Input fields
 username = st.text_input("Username")
 password = st.text_input("Password", type="password")
 login_button = st.button("Login")
+
+
+daily_trivia, trivia_hint, trivia_answer = generate_daily_trivia()
+
+st.info(f"**Daily Trivia:** {daily_trivia}")
+
+# Create buttons for showing the hint and answer
+if st.button("Show Hint"):
+    st.warning(f"**Hint:** {trivia_hint}")
+    
+
+# Show Answer Button
+if st.button("Show Answer"):
+    st.success(f"**Answer:** {trivia_answer}")
+
+
+
+   
 
 # Handle login logic
 if login_button:

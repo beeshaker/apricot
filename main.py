@@ -3,10 +3,11 @@ from conn import MySQLDatabase  # Assuming MySQLDatabase class is in conn.py
 import pandas as pd
 from menu import menu
 
+
 # Initialize database connection
 db = MySQLDatabase()
 
-# Check authentication status
+# Check authentication statusth
 if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
     st.switch_page("pages/login.py")  # Redirect to login page
     st.stop()  # Stop further execution
@@ -14,6 +15,9 @@ if "authenticated" not in st.session_state or not st.session_state["authenticate
 # Set page configuration
 st.set_page_config(page_title="Lease Management Dashboard", page_icon="🏠")
 st.title("Lease Management Dashboard")
+
+# Daily AI-Generated Trivia Question
+
 
 # Sidebar navigation links (visible only to authenticated users)
 if st.session_state["authenticated"]:
