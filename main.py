@@ -20,11 +20,7 @@ if st.session_state["authenticated"]:
     menu()
     
 
-    # Logout button
-    if st.sidebar.button("Logout"):
-        st.session_state.clear()
-        st.success("Logged out successfully!")
-        st.switch_page("pages/login.py")  # Redirect to login page
+    
 
 # Fetch data from the database
 expired = db.fetch_all_expried()

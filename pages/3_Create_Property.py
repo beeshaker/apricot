@@ -9,12 +9,7 @@ if "authenticated" not in st.session_state or not st.session_state["authenticate
 else:
     menu()
     username = st.session_state["username"]  # Get the logged-in user
-    
-    # Logout button
-    if st.sidebar.button("Logout"):
-        st.session_state.clear()
-        st.success("Logged out successfully!")
-        st.switch_page("pages/login.py")  # Redirect to login page
+
     
 # Initialize database connection
 db = MySQLDatabase()

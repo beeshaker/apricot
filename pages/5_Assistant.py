@@ -20,11 +20,7 @@ if "authenticated" not in st.session_state or not st.session_state["authenticate
 else:
     menu()
     
-    # Logout button
-    if st.sidebar.button("Logout"):
-        st.session_state.clear()
-        st.success("Logged out successfully!")
-        st.switch_page("pages/login.py")  # Redirect to login page
+  
 
 st.title("All Leases")
 

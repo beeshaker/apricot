@@ -14,12 +14,7 @@ else:
     
     username = st.session_state["username"]  # Get the logged-in user
     
-    # Logout button
-    if st.sidebar.button("Logout"):
-        st.session_state.clear()
-        st.success("Logged out successfully!")
-        st.switch_page("pages/login.py")  # Redirect to login page
-
+  
 
 # Client Creation Form
 with st.form("client_form"):
