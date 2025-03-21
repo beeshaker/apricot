@@ -5,7 +5,7 @@ from menu import menu
 
 
 if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
-    st.switch_page("pages\login.py")  # ✅ Redirect to login
+    st.switch_page("pages/login.py")  # ✅ Redirect to login
     st.stop()    
 else:
     menu()
@@ -70,10 +70,19 @@ with st.form("lease_form"):
 
             # ✅ Insert the new lease into the database
             lease_id = db.insert_lease(
-                client_id, property_id, unit_name, start_date, end_date, increment_period,
-                original_rental_amount, None, lease_deposit, pdf_path, signed, increment_percentage, increment_amount
+                client_id=client_id,
+                property_id=property_id,
+                unit_name=unit_name,
+                start_date=start_date,
+                end_date=end_date,
+                rental_amount=original_rental_amount,
+                lease_deposit=lease_deposit,
+                lease_pdf=pdf_path,
+                signed=signed,
+                increment_period=increment_period if increment_period > 0 else None,
+                increment_percentage=increment_percentage if increment_percentage > 0 else None,
+                increment_amount=increment_amount if increment_amount > 0 else None
             )
             db.insert_audit_log(username, "Upload Lease", lease_id, "Lease")
-            
-            
+
             st.success("Lease created successfully!")

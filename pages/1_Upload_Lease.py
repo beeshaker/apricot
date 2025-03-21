@@ -10,7 +10,7 @@ from langchain_openai import ChatOpenAI
 import pytesseract
 
 if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
-    st.switch_page("pages\login.py")  # ✅ Redirect to login
+    st.switch_page("pages/login.py")  # ✅ Redirect to login
     st.stop()    
 else:
     menu()
@@ -155,6 +155,9 @@ def Leasesummary():
                     lease_pdf = Lease_file.read() if Lease_file else None
                     increment_percentage = lease_data.get("increment_percentage")
                     increment_amount = lease_data.get("increment_amount")
+                    
+                    if lease_deposit == None:
+                        lease_deposit = 0   
 
                     # Insert the lease using insert_lease
                     if increment_period == None:
@@ -221,7 +224,6 @@ def parse_lease_response(response_text):
         - start_date: The start date of the lease in YYYY-MM-DD format.
         - end_date: The end date of the lease in YYYY-MM-DD format.
         - increment_period: The increment period in months (integer).
-        - unit_name: The specific unit name or identifier.
         - rental_amount: The monthly rental amount (float).
         - lease_deposit: The lease deposit amount (float).
         - increment_percentage: The increament percentage (integer).
@@ -232,7 +234,6 @@ def parse_lease_response(response_text):
             "start_date": "2024-12-01",
             "end_date": "2030-11-30",
             "increment_period": 24,
-            "unit_name": "Suite 5B",
             "rental_amount": 50820.00,
             "lease_deposit": 165060.00
             "increment_percentage": 5

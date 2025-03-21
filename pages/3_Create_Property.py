@@ -4,7 +4,7 @@ from menu import menu
 
 
 if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
-    st.switch_page("pages\login.py")  # ✅ Redirect to login
+    st.switch_page("pages/login.py")  # ✅ Redirect to login
     st.stop()    
 else:
     menu()

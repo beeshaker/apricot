@@ -15,7 +15,7 @@ from menu import menu
 st.set_page_config(page_title="AI assistant", page_icon=":speech_balloon:")
 
 if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
-    st.switch_page("pages\login.py")  # ✅ Redirect to login
+    st.switch_page("pages/login.py")  # ✅ Redirect to login
     st.stop()    
 else:
     menu()

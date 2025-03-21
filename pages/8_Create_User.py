@@ -8,7 +8,7 @@ st.set_page_config(page_title="Create User", page_icon="🆕")
 
 
 if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
-    st.switch_page("pages\login.py")  # ✅ Redirect to login
+    st.switch_page("pages/login.py")  # ✅ Redirect to login
     st.stop()    
 else:
     menu()
