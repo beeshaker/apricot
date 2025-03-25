@@ -5,6 +5,7 @@ import streamlit as st
 
 class MySQLDatabase:
     def __init__(self):
+        
         '''
         self.host = "localhost"
         self.user = "root"
@@ -507,6 +508,26 @@ class MySQLDatabase:
         );
         """
         return self.fetch_all(query)
+    
+    
+    def update_client(self, client_id, phone_number, email, address):
+        try:
+            self.connect()
+            query = """
+                UPDATE client
+                SET phone_number = %s, email = %s, address = %s
+                WHERE client_id = %s
+            """
+            self.cursor.execute(query, (phone_number, email, address, client_id))
+            self.conn.commit()
+            print(f"Client ID {client_id} updated successfully.")
+            return True
+        except Exception as e:
+            print(f"Error updating client ID {client_id}: {e}")
+            return False
+        finally:
+            self.close()
+
 
 
     def insert_audit_log(self, username, action_type, target_id, target_type):
