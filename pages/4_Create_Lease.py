@@ -53,13 +53,9 @@ with st.form("lease_form"):
             st.error("An open lease already exists for this unit. Please close the existing lease before creating a new one.")
         else:
             # Save the uploaded PDF to a directory
-            pdf_path = None
+            pdf_data = None
             if lease_pdf is not None:
-                pdf_dir = "uploaded_leases"
-                os.makedirs(pdf_dir, exist_ok=True)
-                pdf_path = os.path.join(pdf_dir, lease_pdf.name)
-                with open(pdf_path, "wb") as f:
-                    f.write(lease_pdf.getbuffer())
+                pdf_data = lease_pdf.getvalue()  # Read the PDF as bytes
 
             # Get selected client_id and property_id
             client_id = client_options[client_name]
@@ -77,7 +73,7 @@ with st.form("lease_form"):
                 end_date=end_date,
                 rental_amount=original_rental_amount,
                 lease_deposit=lease_deposit,
-                lease_pdf=pdf_path,
+                lease_pdf=pdf_data,
                 signed=signed,
                 increment_period=increment_period if increment_period > 0 else None,
                 increment_percentage=increment_percentage if increment_percentage > 0 else None,
