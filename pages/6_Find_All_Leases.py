@@ -42,7 +42,7 @@ query_all = """
     FROM lease l
     JOIN client c ON l.client_id = c.client_id
     JOIN property p ON l.property_id = p.property_id
-    where status != 'Closed'
+    WHERE l.lease_status != 'Closed'
 """
 leases = db.fetch_all(query_all)
 
