@@ -102,7 +102,7 @@ if lease_table_data:
             new_rental_amount_input = st.number_input(
                 "Enter new rental amount", 
                 min_value=0.0,  
-                max_value=1000000.0, 
+                max_value=1000000000.0, 
                 value=float(new_rental_amount) if new_rental_amount else 0.0
             )
 
