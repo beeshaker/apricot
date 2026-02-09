@@ -16,7 +16,7 @@ def menu():
     if st.session_state.get("username") == "admin":
         st.sidebar.markdown("---")
         st.sidebar.page_link("pages/8_Create_User.py", label="Create User")
-        st.sidebar.page_link("pages/10_Edit_User.py", label="Edit Users")
+        st.sidebar.page_link("pages/10_Manage_users.py", label="Edit Users")
 
     st.sidebar.markdown("---")
 
