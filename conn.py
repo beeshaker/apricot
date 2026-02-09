@@ -2,6 +2,8 @@ import mysql.connector
 from mysql.connector import Error
 import pandas as pd
 import streamlit as st
+import hashlib
+
 
 class MySQLDatabase:
     def __init__(self):
@@ -536,3 +538,96 @@ class MySQLDatabase:
         VALUES (%s, %s, %s, %s)
         """
         self.execute_query(query, (username, action_type, target_id, target_type))
+
+
+    def fetch_all_users(self):
+        """Return users as DataFrame: id, username, is_admin, created_at (if exists)."""
+        try:
+            self.connect()
+            query = """
+                SELECT id, username,
+                       COALESCE(is_admin, 0) AS is_admin,
+                       created_at
+                FROM users
+                ORDER BY id DESC
+            """
+            self.cursor.execute(query)
+            rows = self.cursor.fetchall()
+
+            cols = ["id", "username", "is_admin", "created_at"]
+            return pd.DataFrame(rows, columns=cols)
+        except Error as e:
+            print(f"Error fetching users: {e}")
+            return pd.DataFrame(columns=["id", "username", "is_admin", "created_at"])
+        finally:
+            self.close()
+
+    def username_exists(self, username: str, exclude_id: int | None = None) -> bool:
+        try:
+            self.connect()
+            if exclude_id:
+                q = "SELECT 1 FROM users WHERE username=%s AND id<>%s LIMIT 1"
+                self.cursor.execute(q, (username, exclude_id))
+            else:
+                q = "SELECT 1 FROM users WHERE username=%s LIMIT 1"
+                self.cursor.execute(q, (username,))
+            return self.cursor.fetchone() is not None
+        except Exception as e:
+            print(f"Error checking username: {e}")
+            return True  # safer default
+        finally:
+            self.close()
+
+    def create_user(self, username: str, plain_password: str, is_admin: int = 0):
+        try:
+            self.connect()
+            password_hash = hashlib.sha256(plain_password.encode()).hexdigest()
+            query = "INSERT INTO users (username, password_hash, is_admin) VALUES (%s, %s, %s)"
+            self.cursor.execute(query, (username, password_hash, int(is_admin)))
+            self.conn.commit()
+            return self.cursor.lastrowid
+        except Error as e:
+            print(f"Error creating user: {e}")
+            return None
+        finally:
+            self.close()
+
+    def update_user(self, user_id: int, username: str, is_admin: int = 0):
+        try:
+            self.connect()
+            query = "UPDATE users SET username=%s, is_admin=%s WHERE id=%s"
+            self.cursor.execute(query, (username, int(is_admin), int(user_id)))
+            self.conn.commit()
+            return True
+        except Error as e:
+            print(f"Error updating user: {e}")
+            return False
+        finally:
+            self.close()
+
+    def delete_user(self, user_id: int):
+        try:
+            self.connect()
+            query = "DELETE FROM users WHERE id=%s"
+            self.cursor.execute(query, (int(user_id),))
+            self.conn.commit()
+            return True
+        except Error as e:
+            print(f"Error deleting user: {e}")
+            return False
+        finally:
+            self.close()
+
+    def reset_password(self, user_id: int, new_plain_password: str):
+        try:
+            self.connect()
+            password_hash = hashlib.sha256(new_plain_password.encode()).hexdigest()
+            query = "UPDATE users SET password_hash=%s WHERE id=%s"
+            self.cursor.execute(query, (password_hash, int(user_id)))
+            self.conn.commit()
+            return True
+        except Error as e:
+            print(f"Error resetting password: {e}")
+            return False
+        finally:
+            self.close()
