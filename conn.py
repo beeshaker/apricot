@@ -544,17 +544,19 @@ class MySQLDatabase:
         try:
             self.connect()
             query = """
-                SELECT id, username, is_admin, created_at FROM users
+                SELECT id, username, COALESCE(is_admin,0) AS is_admin, created_at
+                FROM users
                 ORDER BY id DESC
             """
             self.cursor.execute(query)
             rows = self.cursor.fetchall()
-            return pd.DataFrame(rows, columns=["id", "username", "created_at"])
+            return pd.DataFrame(rows, columns=["id", "username", "is_admin", "created_at"])
         except Error as e:
             print(f"Error fetching users: {e}")
-            return pd.DataFrame(columns=["id", "username", "created_at"])
+            return pd.DataFrame(columns=["id", "username", "is_admin", "created_at"])
         finally:
             self.close()
+
 
 
     def username_exists(self, username: str, exclude_id: int | None = None) -> bool:
