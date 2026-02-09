@@ -544,8 +544,7 @@ class MySQLDatabase:
         try:
             self.connect()
             query = """
-                SELECT id, username, created_at
-                FROM users
+                SELECT id, username, is_admin, created_at FROM users
                 ORDER BY id DESC
             """
             self.cursor.execute(query)
