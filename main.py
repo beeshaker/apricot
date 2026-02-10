@@ -8,7 +8,9 @@ from menu import menu
 
 db = MySQLDatabase()
 
+# -----------------------------------------------------------------------------
 # Auth
+# -----------------------------------------------------------------------------
 if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
     st.switch_page("pages/login.py")
     st.stop()
@@ -19,10 +21,11 @@ st.title("🏠 Lease Management Dashboard")
 if st.session_state["authenticated"]:
     menu()
 
-# -----------------------------
-# Session defaults (filters)
-# -----------------------------
-def _init_filters():
+# -----------------------------------------------------------------------------
+# Session defaults (filters + stat click)
+# -----------------------------------------------------------------------------
+def _init_state():
+    # Filters
     st.session_state.setdefault("lease_filter_property", "All")
     st.session_state.setdefault("lease_filter_unit", "")
     st.session_state.setdefault("lease_filter_year", "All")
@@ -30,20 +33,25 @@ def _init_filters():
     st.session_state.setdefault("lease_filter_inc_min", None)
     st.session_state.setdefault("lease_filter_inc_max", None)
 
-_init_filters()
+    # Click-to-view bucket (from stat cards)
+    # ALL / EXPIRED / EXPIRING / UPLOADED / INC_DUE
+    st.session_state.setdefault("lease_bucket", "ALL")
+
+_init_state()
 
 def clear_filters():
     st.session_state["lease_filter_property"] = "All"
     st.session_state["lease_filter_unit"] = ""
     st.session_state["lease_filter_year"] = "All"
     st.session_state["lease_filter_inc_due"] = False
-    # keep % range as-is (optional) or reset:
+    st.session_state["lease_bucket"] = "ALL"
+    # Keep % range as-is (optional) or reset:
     # st.session_state["lease_filter_inc_min"] = None
     # st.session_state["lease_filter_inc_max"] = None
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Helpers
-# -----------------------------
+# -----------------------------------------------------------------------------
 def to_dt(s):
     return pd.to_datetime(s, errors="coerce")
 
@@ -63,9 +71,9 @@ def next_increment_due(
     k = max(0, (months_diff // period_months) + 1)
     return start_date + pd.DateOffset(months=k * period_months)
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Load data
-# -----------------------------
+# -----------------------------------------------------------------------------
 leases_df_all = db.fetch_all_leases_dashboard()
 props_df = db.fetch_properties()
 
@@ -73,25 +81,27 @@ if leases_df_all is None or leases_df_all.empty:
     st.info("✅ No leases found.")
     st.stop()
 
-leases_df_all["start_date"] = to_dt(leases_df_all["start_date"])
-leases_df_all["end_date"] = to_dt(leases_df_all["end_date"])
-leases_df_all["created_at"] = to_dt(leases_df_all["created_at"])
-leases_df_all["increment_percentage"] = pd.to_numeric(leases_df_all["increment_percentage"], errors="coerce")
-leases_df_all["increment_period"] = pd.to_numeric(leases_df_all["increment_period"], errors="coerce")
+# Normalize dtypes
+leases_df_all["start_date"] = to_dt(leases_df_all.get("start_date"))
+leases_df_all["end_date"] = to_dt(leases_df_all.get("end_date"))
+leases_df_all["created_at"] = to_dt(leases_df_all.get("created_at"))
+leases_df_all["increment_percentage"] = pd.to_numeric(leases_df_all.get("increment_percentage"), errors="coerce")
+leases_df_all["increment_period"] = pd.to_numeric(leases_df_all.get("increment_period"), errors="coerce")
 
 today = pd.Timestamp(date.today())
 three_months_ahead = today + pd.DateOffset(months=3)
 three_months_ago = today - pd.DateOffset(months=3)
 
+# Derived: next increment due date
 leases_df_all["next_increment_due"] = leases_df_all.apply(
     lambda r: next_increment_due(r["start_date"], r["increment_period"], today),
     axis=1
 )
 leases_df_all["next_increment_due"] = pd.to_datetime(leases_df_all["next_increment_due"], errors="coerce")
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Buckets (expiry)
-# -----------------------------
+# -----------------------------------------------------------------------------
 leases_df_all["_end_date_only"] = leases_df_all["end_date"].dt.date
 today_date = today.date()
 
@@ -125,12 +135,14 @@ def style_expiry_rows(row):
     bucket = row.get("_expiry_bucket", "No end date")
     return [EXP_COLORS.get(bucket, "")] * len(row)
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Stats (full df)
-# -----------------------------
+# -----------------------------------------------------------------------------
 expired_count = int((leases_df_all["_expiry_bucket"] == "Expired").sum())
 expiring_count = int((leases_df_all["_expiry_bucket"] == "Expiring (≤ 3 months)").sum())
-uploaded_3m_count = int((leases_df_all["created_at"].notna() & (leases_df_all["created_at"] >= three_months_ago)).sum())
+uploaded_3m_count = int(
+    (leases_df_all["created_at"].notna() & (leases_df_all["created_at"] >= three_months_ago)).sum()
+)
 
 inc_due_90 = int(
     (leases_df_all["next_increment_due"].notna()
@@ -138,24 +150,46 @@ inc_due_90 = int(
      & (leases_df_all["next_increment_due"] <= (today + pd.Timedelta(days=90)))).sum()
 )
 
-# -----------------------------
-# Simple stats cards (reuse your existing CSS if you want)
-# -----------------------------
+# -----------------------------------------------------------------------------
+# CLICKABLE STATS (so user can click and see the leases)
+# -----------------------------------------------------------------------------
+st.caption("Click a stat to view the matching leases below.")
+
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Expired", expired_count)
-c2.metric("Expiring ≤ 3 months", expiring_count)
-c3.metric("Uploaded last 3 months", uploaded_3m_count)
-c4.metric("Increment due ≤ 90 days", inc_due_90)
+
+with c1:
+    if st.button(f"Expired\n\n{expired_count}", use_container_width=True):
+        st.session_state.lease_bucket = "EXPIRED"
+        st.rerun()
+
+with c2:
+    if st.button(f"Expiring ≤ 3 months\n\n{expiring_count}", use_container_width=True):
+        st.session_state.lease_bucket = "EXPIRING"
+        st.rerun()
+
+with c3:
+    if st.button(f"Uploaded last 3 months\n\n{uploaded_3m_count}", use_container_width=True):
+        st.session_state.lease_bucket = "UPLOADED"
+        st.rerun()
+
+with c4:
+    if st.button(f"Increment due ≤ 90 days\n\n{inc_due_90}", use_container_width=True):
+        st.session_state.lease_bucket = "INC_DUE"
+        st.rerun()
 
 st.divider()
 
-# -----------------------------
+# -----------------------------------------------------------------------------
 # Filters row (ticket-like)
-# -----------------------------
+# -----------------------------------------------------------------------------
 f1, f2, f3, f4, f5 = st.columns([1.2, 1, 0.9, 1.2, 0.7])
 
 with f1:
-    prop_vals = sorted(props_df["property_name"].dropna().unique().tolist()) if props_df is not None and not props_df.empty else []
+    prop_vals = (
+        sorted(props_df["property_name"].dropna().unique().tolist())
+        if props_df is not None and not props_df.empty and "property_name" in props_df.columns
+        else []
+    )
     prop_options = ["All"] + prop_vals
     st.selectbox(
         "Property",
@@ -186,19 +220,19 @@ with f3:
 
 with f4:
     st.checkbox(
-        "Increment due ≤ 90 days",
+        "Increment due ≤ 90 days (filter)",
         value=bool(st.session_state.lease_filter_inc_due),
         key="lease_filter_inc_due",
+        help="If checked, limits ALL tabs to leases with next increment due within 90 days.",
     )
 
 with f5:
     st.button("Clear", use_container_width=True, on_click=clear_filters)
 
-# Increment % range filter (below filters row, like a "secondary filter")
+# Secondary filter: increment % range
 inc_min = float(leases_df_all["increment_percentage"].min()) if leases_df_all["increment_percentage"].notna().any() else 0.0
 inc_max = float(leases_df_all["increment_percentage"].max()) if leases_df_all["increment_percentage"].notna().any() else 100.0
 
-# keep stable defaults
 if st.session_state.lease_filter_inc_min is None:
     st.session_state.lease_filter_inc_min = inc_min
 if st.session_state.lease_filter_inc_max is None:
@@ -213,9 +247,9 @@ inc_range = st.slider(
 
 st.session_state.lease_filter_inc_min, st.session_state.lease_filter_inc_max = inc_range
 
-# -----------------------------
-# Apply filters
-# -----------------------------
+# -----------------------------------------------------------------------------
+# Apply filters (base filters applied to all tabs)
+# -----------------------------------------------------------------------------
 leases_df = leases_df_all.copy()
 
 sel_prop = st.session_state.lease_filter_property
@@ -232,10 +266,13 @@ if sel_year != "All":
 
 # Increment % range
 leases_df = leases_df[
-    leases_df["increment_percentage"].fillna(-1).between(st.session_state.lease_filter_inc_min, st.session_state.lease_filter_inc_max)
+    leases_df["increment_percentage"].fillna(-1).between(
+        st.session_state.lease_filter_inc_min,
+        st.session_state.lease_filter_inc_max
+    )
 ]
 
-# Increment due ≤ 90 days
+# Increment due checkbox (global filter)
 if st.session_state.lease_filter_inc_due:
     in_90 = today + pd.Timedelta(days=90)
     leases_df = leases_df[
@@ -248,48 +285,80 @@ if leases_df.empty:
     st.warning("No leases match your filters.")
     st.stop()
 
-# -----------------------------
-# Tabs (like tickets dashboard)
-# -----------------------------
-tab_expired, tab_expiring, tab_uploaded = st.tabs(["🔴 Expired", "🟠 Expiring (≤ 3 months)", "🆕 Uploaded (last 3 months)"])
-
+# -----------------------------------------------------------------------------
+# Tab helper
+# -----------------------------------------------------------------------------
 def prep_display(df_in: pd.DataFrame) -> pd.DataFrame:
     df_out = df_in.copy()
     df_out.insert(0, "Status", df_out["_expiry_bucket"].map(EXP_ICON).fillna("⚪"))
-    # hide helper cols
-    drop_cols = ["_end_date_only"]
-    df_out = df_out.drop(columns=[c for c in drop_cols if c in df_out.columns], errors="ignore")
-    # reorder a bit
+    df_out = df_out.drop(columns=["_end_date_only"], errors="ignore")
+
     preferred = [
-        "Status","property_name","unit_name","lease_id","lease_status","signed",
-        "start_date","end_date","created_at",
-        "increment_percentage","increment_period","increment_amount","next_increment_due",
-        "client_id"
+        "Status", "property_name", "unit_name", "lease_id", "lease_status", "signed",
+        "start_date", "end_date", "created_at",
+        "increment_percentage", "increment_period", "increment_amount", "next_increment_due",
+        "client_id",
     ]
     keep = [c for c in preferred if c in df_out.columns] + [c for c in df_out.columns if c not in preferred]
     return df_out[keep]
 
+# -----------------------------------------------------------------------------
+# If a stat card was clicked, show a banner + auto-focus user mentally
+# -----------------------------------------------------------------------------
+bucket = st.session_state.lease_bucket
+if bucket != "ALL":
+    nice = {
+        "EXPIRED": "Expired",
+        "EXPIRING": "Expiring ≤ 3 months",
+        "UPLOADED": "Uploaded last 3 months",
+        "INC_DUE": "Increment due ≤ 90 days",
+    }.get(bucket, bucket)
+    st.info(f"Showing: **{nice}** (from stat click). Use **Clear** to reset.")
+
+# -----------------------------------------------------------------------------
+# Tabs (like tickets dashboard)
+# -----------------------------------------------------------------------------
+tab_expired, tab_expiring, tab_uploaded = st.tabs(
+    ["🔴 Expired", "🟠 Expiring (≤ 3 months)", "🆕 Uploaded (last 3 months)"]
+)
+
 with tab_expired:
     df1 = leases_df[leases_df["_expiry_bucket"] == "Expired"]
-    if df1.empty:
+
+    if bucket not in ("ALL", "EXPIRED"):
+        st.info("Click **Expired** above (or Clear) to view this tab’s leases.")
+    elif df1.empty:
         st.info("No expired leases under current filters.")
     else:
         styled = prep_display(df1).style.apply(style_expiry_rows, axis=1)
         st.dataframe(styled, use_container_width=True, hide_index=True)
 
 with tab_expiring:
-    df2 = leases_df[leases_df["_expiry_bucket"] == "Expiring (≤ 3 months)"]
-    if df2.empty:
-        st.info("No leases expiring within 3 months under current filters.")
+    if bucket == "INC_DUE":
+        in_90 = today + pd.Timedelta(days=90)
+        df2 = leases_df[
+            leases_df["next_increment_due"].notna()
+            & (leases_df["next_increment_due"] >= today)
+            & (leases_df["next_increment_due"] <= in_90)
+        ]
+    else:
+        df2 = leases_df[leases_df["_expiry_bucket"] == "Expiring (≤ 3 months)"]
+
+    if bucket not in ("ALL", "EXPIRING", "INC_DUE"):
+        st.info("Click **Expiring** or **Increment due** above (or Clear) to view this tab’s leases.")
+    elif df2.empty:
+        st.info("No matching leases under current filters.")
     else:
         styled = prep_display(df2).style.apply(style_expiry_rows, axis=1)
         st.dataframe(styled, use_container_width=True, hide_index=True)
 
 with tab_uploaded:
     df3 = leases_df[leases_df["created_at"].notna() & (leases_df["created_at"] >= three_months_ago)]
-    if df3.empty:
+
+    if bucket not in ("ALL", "UPLOADED"):
+        st.info("Click **Uploaded** above (or Clear) to view this tab’s leases.")
+    elif df3.empty:
         st.info("No leases uploaded in last 3 months under current filters.")
     else:
-        # uploaded is not an expiry bucket; still keep colors based on expiry if you want
         styled = prep_display(df3).style.apply(style_expiry_rows, axis=1)
         st.dataframe(styled, use_container_width=True, hide_index=True)
