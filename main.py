@@ -37,6 +37,9 @@ def _init_state():
     # ALL / EXPIRED / EXPIRING / UPLOADED / INC_DUE
     st.session_state.setdefault("lease_bucket", "ALL")
 
+    # Internal: track last property to auto-fill max only when property changes
+    st.session_state.setdefault("_last_prop_for_inc_autofill", None)
+
 _init_state()
 
 def clear_filters():
@@ -70,6 +73,42 @@ def next_increment_due(
         months_diff -= 1
     k = max(0, (months_diff // period_months) + 1)
     return start_date + pd.DateOffset(months=k * period_months)
+
+def _swap_if_needed():
+    """Ensure min <= max for increment filters."""
+    try:
+        mn = st.session_state.lease_filter_inc_min
+        mx = st.session_state.lease_filter_inc_max
+        if mn is not None and mx is not None and float(mn) > float(mx):
+            st.session_state.lease_filter_inc_min, st.session_state.lease_filter_inc_max = mx, mn
+            st.warning("Min increment % was greater than Max increment % — values were swapped.")
+    except Exception:
+        pass
+
+def _apply_preset_inc(pct: float):
+    """
+    Preset buttons:
+    - Sets Max = Min + preset (capped at current allowed max).
+    - Keeps Min as-is (or sets to 0 if None).
+    """
+    try:
+        allowed_max = float(st.session_state.get("_inc_allowed_max", 100.0))
+        cur_min = st.session_state.lease_filter_inc_min
+        if cur_min is None:
+            cur_min = 0.0
+        cur_min = float(cur_min)
+
+        st.session_state.lease_filter_inc_min = cur_min
+        st.session_state.lease_filter_inc_max = min(allowed_max, cur_min + float(pct))
+
+        _swap_if_needed()
+        st.session_state.lease_bucket = "ALL"
+        st.rerun()
+    except Exception:
+        st.session_state.lease_filter_inc_min = 0.0
+        st.session_state.lease_filter_inc_max = float(pct)
+        _swap_if_needed()
+        st.rerun()
 
 # -----------------------------------------------------------------------------
 # Load data
@@ -151,7 +190,7 @@ inc_due_90 = int(
 )
 
 # -----------------------------------------------------------------------------
-# CLICKABLE STATS (so user can click and see the leases)
+# CLICKABLE STATS
 # -----------------------------------------------------------------------------
 st.caption("Click a stat to view the matching leases below.")
 
@@ -180,7 +219,7 @@ with c4:
 st.divider()
 
 # -----------------------------------------------------------------------------
-# Filters row (ticket-like)
+# Filters row (ticket-like)  ✅ Auto-fill max based on selected property
 # -----------------------------------------------------------------------------
 f1, f2, f3, f4, f5 = st.columns([1.2, 1, 0.9, 1.2, 0.7])
 
@@ -191,7 +230,8 @@ with f1:
         else []
     )
     prop_options = ["All"] + prop_vals
-    st.selectbox(
+
+    selected_prop = st.selectbox(
         "Property",
         options=prop_options,
         index=prop_options.index(st.session_state.lease_filter_property)
@@ -229,23 +269,86 @@ with f4:
 with f5:
     st.button("Clear", use_container_width=True, on_click=clear_filters)
 
-# Secondary filter: increment % range
-inc_min = float(leases_df_all["increment_percentage"].min()) if leases_df_all["increment_percentage"].notna().any() else 0.0
-inc_max = float(leases_df_all["increment_percentage"].max()) if leases_df_all["increment_percentage"].notna().any() else 100.0
+# -----------------------------------------------------------------------------
+# Increment % filter (number inputs) + presets + auto-fill max for selected property
+# -----------------------------------------------------------------------------
+st.markdown("#### Increment % filter")
 
+# Determine allowed max/min based on selected property
+# If property selected -> allowed max = max increment % in that property
+# Else -> allowed max = max increment % in whole dataset
+df_for_limits = leases_df_all.copy()
+if st.session_state.lease_filter_property != "All":
+    df_for_limits = df_for_limits[df_for_limits["property_name"] == st.session_state.lease_filter_property]
+
+# Compute limits (fallbacks)
+inc_min_db = float(df_for_limits["increment_percentage"].min()) if df_for_limits["increment_percentage"].notna().any() else 0.0
+inc_max_allowed = float(df_for_limits["increment_percentage"].max()) if df_for_limits["increment_percentage"].notna().any() else 100.0
+
+# Store for presets (caps)
+st.session_state["_inc_allowed_max"] = inc_max_allowed
+
+# Auto-fill max when property changes
+current_prop = st.session_state.lease_filter_property
+last_prop = st.session_state.get("_last_prop_for_inc_autofill")
+
+if current_prop != last_prop:
+    # If user switches property, set max to that property's max
+    # Keep min as-is unless it's None
+    if st.session_state.lease_filter_inc_min is None:
+        st.session_state.lease_filter_inc_min = inc_min_db
+
+    st.session_state.lease_filter_inc_max = inc_max_allowed
+    st.session_state["_last_prop_for_inc_autofill"] = current_prop
+
+# Ensure we have sane defaults
 if st.session_state.lease_filter_inc_min is None:
-    st.session_state.lease_filter_inc_min = inc_min
+    st.session_state.lease_filter_inc_min = inc_min_db
 if st.session_state.lease_filter_inc_max is None:
-    st.session_state.lease_filter_inc_max = inc_max
+    st.session_state.lease_filter_inc_max = inc_max_allowed
 
-inc_range = st.slider(
-    "Increment % range",
-    min_value=float(inc_min),
-    max_value=float(inc_max),
-    value=(float(st.session_state.lease_filter_inc_min), float(st.session_state.lease_filter_inc_max)),
-)
+# Cap current values to allowed max
+try:
+    st.session_state.lease_filter_inc_min = min(float(st.session_state.lease_filter_inc_min), float(inc_max_allowed))
+    st.session_state.lease_filter_inc_max = min(float(st.session_state.lease_filter_inc_max), float(inc_max_allowed))
+except Exception:
+    pass
 
-st.session_state.lease_filter_inc_min, st.session_state.lease_filter_inc_max = inc_range
+# Preset buttons
+p1, p2, p3, p4 = st.columns([0.7, 0.7, 0.7, 2.2])
+with p1:
+    st.button("+5%", use_container_width=True, on_click=_apply_preset_inc, args=(5.0,))
+with p2:
+    st.button("+10%", use_container_width=True, on_click=_apply_preset_inc, args=(10.0,))
+with p3:
+    st.button("+15%", use_container_width=True, on_click=_apply_preset_inc, args=(15.0,))
+with p4:
+    st.caption("Presets set Max = Min + preset (capped to selected property's max).")
+
+# Number inputs
+n1, n2 = st.columns([1, 1])
+with n1:
+    st.number_input(
+        "Min increment %",
+        min_value=0.0,
+        max_value=float(inc_max_allowed),
+        step=0.25,
+        format="%.2f",
+        key="lease_filter_inc_min",
+    )
+
+with n2:
+    st.number_input(
+        "Max increment %",
+        min_value=0.0,
+        max_value=float(inc_max_allowed),
+        step=0.25,
+        format="%.2f",
+        key="lease_filter_inc_max",
+    )
+
+_swap_if_needed()
+st.divider()
 
 # -----------------------------------------------------------------------------
 # Apply filters (base filters applied to all tabs)
@@ -267,8 +370,8 @@ if sel_year != "All":
 # Increment % range
 leases_df = leases_df[
     leases_df["increment_percentage"].fillna(-1).between(
-        st.session_state.lease_filter_inc_min,
-        st.session_state.lease_filter_inc_max
+        float(st.session_state.lease_filter_inc_min),
+        float(st.session_state.lease_filter_inc_max),
     )
 ]
 
@@ -303,7 +406,7 @@ def prep_display(df_in: pd.DataFrame) -> pd.DataFrame:
     return df_out[keep]
 
 # -----------------------------------------------------------------------------
-# If a stat card was clicked, show a banner + auto-focus user mentally
+# If a stat card was clicked, show a banner
 # -----------------------------------------------------------------------------
 bucket = st.session_state.lease_bucket
 if bucket != "ALL":
@@ -316,7 +419,7 @@ if bucket != "ALL":
     st.info(f"Showing: **{nice}** (from stat click). Use **Clear** to reset.")
 
 # -----------------------------------------------------------------------------
-# Tabs (like tickets dashboard)
+# Tabs
 # -----------------------------------------------------------------------------
 tab_expired, tab_expiring, tab_uploaded = st.tabs(
     ["🔴 Expired", "🟠 Expiring (≤ 3 months)", "🆕 Uploaded (last 3 months)"]
