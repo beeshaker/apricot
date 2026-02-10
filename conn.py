@@ -574,8 +574,8 @@ class MySQLDatabase:
                 l.increment_amount,
                 l.lease_status,
                 l.signed
-            FROM leases l
-            LEFT JOIN properties p ON p.property_id = l.property_id
+            FROM lease l
+            LEFT JOIN property p ON p.property_id = l.property_id
             ORDER BY p.property_name, l.unit_name, l.end_date;
         """
         rows = self.fetch_all(query)
