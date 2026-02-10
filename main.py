@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
-from dateutil.relativedelta import relativedelta
-
 from conn import MySQLDatabase
 from menu import menu
 
@@ -25,54 +23,69 @@ if st.session_state["authenticated"]:
 def to_dt(s):
     return pd.to_datetime(s, errors="coerce")
 
-def norm_bool(x):
-    if pd.isna(x):
-        return False
-    if isinstance(x, bool):
-        return x
-    return str(x).strip().lower() in ("1", "true", "yes", "y")
+def add_months(dt: pd.Timestamp, months: int) -> pd.Timestamp:
+    return dt + pd.DateOffset(months=months)
+
+def next_increment_due(start_date: pd.Timestamp, period_months: float, today: pd.Timestamp) -> pd.Timestamp | pd.NaT:
+    """
+    Assumes increment_period is in MONTHS (12 = yearly).
+    """
+    if pd.isna(start_date) or pd.isna(period_months) or period_months <= 0:
+        return pd.NaT
+
+    period_months = int(period_months)
+
+    months_diff = (today.year - start_date.year) * 12 + (today.month - start_date.month)
+    if today.day < start_date.day:
+        months_diff -= 1
+
+    k = max(0, (months_diff // period_months) + 1)  # next period number
+    return add_months(start_date, k * period_months)
 
 # -----------------------------
-# Fetch all leases once
+# Load data
 # -----------------------------
-leases = db.fetch_all_leases()  # <-- you will add this in conn.py (section 2)
+df = db.fetch_all_leases_dashboard()
 
-if leases.empty:
+if df.empty:
     st.info("No leases found.")
     st.stop()
 
-# Expected columns (adjust names here if your DB uses different ones)
-# property_name, lease_end_date, created_at, lease_type, increment_due_date, increment_percent
-leases["lease_end_date"] = to_dt(leases.get("lease_end_date"))
-leases["created_at"] = to_dt(leases.get("created_at"))
-leases["increment_due_date"] = to_dt(leases.get("increment_due_date"))
-leases["increment_percent"] = pd.to_numeric(leases.get("increment_percent"), errors="coerce")
+df["start_date"] = to_dt(df["start_date"])
+df["end_date"] = to_dt(df["end_date"])
+df["created_at"] = to_dt(df["created_at"])
+df["increment_percentage"] = pd.to_numeric(df["increment_percentage"], errors="coerce")
+df["increment_period"] = pd.to_numeric(df["increment_period"], errors="coerce")
+
+today = pd.Timestamp(date.today())
+three_months_ahead = today + pd.DateOffset(months=3)
+three_months_ago = today - pd.DateOffset(months=3)
+
+# derived increment due date
+df["next_increment_due"] = df.apply(
+    lambda r: next_increment_due(r["start_date"], r["increment_period"], today),
+    axis=1
+)
 
 # -----------------------------
 # Sidebar filters
 # -----------------------------
 st.sidebar.header("Filters")
 
-# Year filter (by lease_end_date OR created_at; we’ll filter on lease_end_date by default)
-years = sorted(
-    {d.year for d in leases["lease_end_date"].dropna().dt.to_pydatetime()},
-    reverse=True
-)
-selected_year = st.sidebar.selectbox("Year (by Lease End Date)", ["All"] + years)
+# Year filter (end_date year)
+end_years = sorted(df["end_date"].dropna().dt.year.unique().tolist(), reverse=True)
+selected_year = st.sidebar.selectbox("Year (by end_date)", ["All"] + end_years)
 
-lease_type_vals = sorted([x for x in leases["lease_type"].dropna().unique().tolist()])
-selected_types = st.sidebar.multiselect(
-    "Lease Type",
-    options=lease_type_vals,
-    default=lease_type_vals
-)
-
-# Increment due (based on increment_due_date being within X days)
-inc_due_only = st.sidebar.checkbox("Show only Increment Due (next 90 days)", value=False)
+# Increment due in X days
+inc_due_only = st.sidebar.checkbox("Show only increment due within 90 days", value=False)
 
 # Increment % range
-min_p = float(leases["increment_percent"].min()) if leases["increment_percent"].notna().any() else 0.0
-max_p = float(leases["increment_percent"].max()) if leases["increment_percent"].notna().any() else 100.0
+if df["increment_percentage"].notna().any():
+    min_p = float(df["increment_percentage"].min())
+    max_p = float(df["increment_percentage"].max())
+else:
+    min_p, max_p = 0.0, 100.0
+
 inc_range = st.sidebar.slider(
     "Increment % range",
     min_value=float(min_p),
@@ -80,98 +93,100 @@ inc_range = st.sidebar.slider(
     value=(float(min_p), float(max_p))
 )
 
-# Optional: property search
-prop_search = st.sidebar.text_input("Search Property", value="").strip().lower()
+# Search property/unit
+search = st.sidebar.text_input("Search property / unit", value="").strip().lower()
 
 # -----------------------------
 # Apply filters
 # -----------------------------
-df = leases.copy()
+f = df.copy()
 
 if selected_year != "All":
-    df = df[df["lease_end_date"].dt.year == int(selected_year)]
+    f = f[f["end_date"].dt.year == int(selected_year)]
 
-if selected_types:
-    df = df[df["lease_type"].isin(selected_types)]
-
-df = df[df["increment_percent"].fillna(-1).between(inc_range[0], inc_range[1])]
-
-today = pd.Timestamp(date.today())
-in_90_days = today + pd.Timedelta(days=90)
+f = f[f["increment_percentage"].fillna(-1).between(inc_range[0], inc_range[1])]
 
 if inc_due_only:
-    # increment_due_date within next 90 days
-    df = df[(df["increment_due_date"].notna()) & (df["increment_due_date"] <= in_90_days) & (df["increment_due_date"] >= today)]
+    in_90 = today + pd.Timedelta(days=90)
+    f = f[(f["next_increment_due"].notna()) & (f["next_increment_due"] >= today) & (f["next_increment_due"] <= in_90)]
 
-if prop_search:
-    df = df[df["property_name"].fillna("").str.lower().str.contains(prop_search)]
-
-# -----------------------------
-# Define the 3 windows
-# -----------------------------
-three_months_ahead = today + relativedelta(months=3)
-three_months_ago = today - relativedelta(months=3)
-
-expired_df = df[df["lease_end_date"].notna() & (df["lease_end_date"] < today)].copy()
-expiring_3m_df = df[df["lease_end_date"].notna() & (df["lease_end_date"] >= today) & (df["lease_end_date"] <= three_months_ahead)].copy()
-uploaded_3m_df = df[df["created_at"].notna() & (df["created_at"] >= three_months_ago)].copy()
+if search:
+    f = f[
+        f["property_name"].fillna("").str.lower().str.contains(search)
+        | f["unit_name"].fillna("").str.lower().str.contains(search)
+        | f["property_id"].astype(str).str.contains(search)
+    ]
 
 # -----------------------------
-# Property-first UI
+# Windows (global counts)
 # -----------------------------
-st.subheader("Properties")
+expired_df = f[f["end_date"].notna() & (f["end_date"] < today)].copy()
+expiring_3m_df = f[f["end_date"].notna() & (f["end_date"] >= today) & (f["end_date"] <= three_months_ahead)].copy()
+uploaded_3m_df = f[f["created_at"].notna() & (f["created_at"] >= three_months_ago)].copy()
 
-# Build per-property views so leases don’t mix
-properties = sorted([p for p in df["property_name"].dropna().unique().tolist()])
-
-if not properties:
-    st.warning("No properties match your filters.")
-    st.stop()
-
-# Summary counts
-c1, c2, c3 = st.columns(3)
-c1.metric("Expired (filtered)", len(expired_df))
-c2.metric("Expiring in 3 months (filtered)", len(expiring_3m_df))
-c3.metric("Uploaded in last 3 months (filtered)", len(uploaded_3m_df))
+# Summary
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Expired", len(expired_df))
+c2.metric("Expiring (≤ 3 months)", len(expiring_3m_df))
+c3.metric("Uploaded (last 3 months)", len(uploaded_3m_df))
+c4.metric(
+    "Increment due (≤ 90 days)",
+    int(((f["next_increment_due"].notna())
+         & (f["next_increment_due"] <= (today + pd.Timedelta(days=90)))
+         & (f["next_increment_due"] >= today)).sum())
+)
 
 st.divider()
 
-for prop in properties:
-    prop_all = df[df["property_name"] == prop].copy()
-    prop_expired = expired_df[expired_df["property_name"] == prop].copy()
-    prop_expiring = expiring_3m_df[expiring_3m_df["property_name"] == prop].copy()
-    prop_uploaded = uploaded_3m_df[uploaded_3m_df["property_name"] == prop].copy()
+# -----------------------------
+# Property/Unit windows (no mixing)
+# -----------------------------
+groups = (
+    f[["property_id", "property_name", "unit_name"]]
+    .dropna(subset=["property_id", "unit_name"])
+    .drop_duplicates()
+    .sort_values(["property_name", "unit_name"])
+    .values.tolist()
+)
 
-    # Skip properties with nothing after filters (optional)
-    if prop_expired.empty and prop_expiring.empty and prop_uploaded.empty:
+if not groups:
+    st.warning("No results match your filters.")
+    st.stop()
+
+cols_to_show = [
+    "lease_id", "lease_status", "signed",
+    "start_date", "end_date", "created_at",
+    "increment_percentage", "increment_period", "increment_amount",
+    "next_increment_due",
+    "client_id"
+]
+
+for property_id, property_name, unit_name in groups:
+    g_expired = expired_df[(expired_df["property_id"] == property_id) & (expired_df["unit_name"] == unit_name)]
+    g_expiring = expiring_3m_df[(expiring_3m_df["property_id"] == property_id) & (expiring_3m_df["unit_name"] == unit_name)]
+    g_uploaded = uploaded_3m_df[(uploaded_3m_df["property_id"] == property_id) & (uploaded_3m_df["unit_name"] == unit_name)]
+
+    if g_expired.empty and g_expiring.empty and g_uploaded.empty:
         continue
 
-    with st.expander(f"🏠 {prop}  |  Expired: {len(prop_expired)}  •  3m Expiring: {len(prop_expiring)}  •  Uploaded 3m: {len(prop_uploaded)}", expanded=False):
+    header = f"🏠 {property_name} — {unit_name} | Expired: {len(g_expired)} • 3m: {len(g_expiring)} • Uploaded 3m: {len(g_uploaded)}"
+    with st.expander(header, expanded=False):
         tab1, tab2, tab3 = st.tabs(["Expired", "3 Months to Expire", "Uploaded (Last 3 Months)"])
 
         with tab1:
-            if prop_expired.empty:
-                st.info("No expired leases for this property (under current filters).")
+            if g_expired.empty:
+                st.info("No expired leases here.")
             else:
-                st.dataframe(
-                    prop_expired.sort_values("lease_end_date"),
-                    use_container_width=True
-                )
+                st.dataframe(g_expired[cols_to_show].sort_values("end_date"), use_container_width=True)
 
         with tab2:
-            if prop_expiring.empty:
-                st.info("No leases expiring within 3 months for this property (under current filters).")
+            if g_expiring.empty:
+                st.info("No leases expiring within 3 months here.")
             else:
-                st.dataframe(
-                    prop_expiring.sort_values("lease_end_date"),
-                    use_container_width=True
-                )
+                st.dataframe(g_expiring[cols_to_show].sort_values("end_date"), use_container_width=True)
 
         with tab3:
-            if prop_uploaded.empty:
-                st.info("No leases uploaded in the last 3 months for this property (under current filters).")
+            if g_uploaded.empty:
+                st.info("No leases uploaded in the last 3 months here.")
             else:
-                st.dataframe(
-                    prop_uploaded.sort_values("created_at", ascending=False),
-                    use_container_width=True
-                )
+                st.dataframe(g_uploaded[cols_to_show].sort_values("created_at", ascending=False), use_container_width=True)
