@@ -26,7 +26,7 @@ def to_dt(s):
 def add_months(dt: pd.Timestamp, months: int) -> pd.Timestamp:
     return dt + pd.DateOffset(months=months)
 
-def next_increment_due(start_date: pd.Timestamp, period_months: float, today: pd.Timestamp) -> pd.Timestamp | pd.NaT:
+def next_increment_due(start_date, period_months, today):
     """
     Assumes increment_period is in MONTHS (12 = yearly).
     """
