@@ -559,7 +559,7 @@ class MySQLDatabase:
 
     
     def fetch_all_leases_dashboard(self) -> pd.DataFrame:
-        query = """
+        q = """
             SELECT
                 l.lease_id,
                 l.property_id,
@@ -578,8 +578,7 @@ class MySQLDatabase:
             LEFT JOIN property p ON p.property_id = l.property_id
             ORDER BY p.property_name, l.unit_name, l.end_date;
         """
-        rows = self.fetch_all(query)
-
+        rows = self.fetch_all(q)
         if rows and not isinstance(rows[0], dict):
             return pd.DataFrame(rows, columns=[
                 "lease_id","property_id","property_name","unit_name","client_id",
@@ -587,8 +586,17 @@ class MySQLDatabase:
                 "increment_percentage","increment_period","increment_amount",
                 "lease_status","signed"
             ])
-
         return pd.DataFrame(rows)
+
+    
+
+    def fetch_properties(self) -> pd.DataFrame:
+        q = "SELECT property_id, property_name FROM property ORDER BY property_name;"
+        rows = self.fetch_all(q)
+        if rows and not isinstance(rows[0], dict):
+            return pd.DataFrame(rows, columns=["property_id", "property_name"])
+        return pd.DataFrame(rows)
+
 
     def username_exists(self, username: str, exclude_id: int | None = None) -> bool:
         try:
